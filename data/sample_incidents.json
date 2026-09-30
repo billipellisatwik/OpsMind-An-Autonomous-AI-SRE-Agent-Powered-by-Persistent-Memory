@@ -1,0 +1,32 @@
+[
+  {
+    "incident_id": "INC-2026-001",
+    "service": "checkout-service",
+    "timestamp": "2026-09-29T14:30:00Z",
+    "symptoms_summary": "High latency (8200ms) and 45.2% error rate on checkout endpoint during flash sale traffic.",
+    "log_excerpt": "2026-09-29 14:30:02 ERROR [checkout-service] HikariPool-1 - Connection is not available, request timed out after 30000ms. Active connections: 100/100, waiting threads: 45.",
+    "root_cause": "PostgreSQL connection pool exhaustion caused by unindexed orders query combined with low HikariCP maxPoolSize (100) under peak checkout load.",
+    "resolution_steps": "1. Scaled HikariCP maxPoolSize from 100 to 250 in application.yml config.\n2. Added composite B-tree index on orders table (user_id, status, created_at).\n3. Restarted checkout service instances sequentially.",
+    "was_successful": true
+  },
+  {
+    "incident_id": "INC-2026-002",
+    "service": "catalog-api",
+    "timestamp": "2026-09-28T09:15:00Z",
+    "symptoms_summary": "Backend CPU spiked to 98% with catalog response times jumping from 12ms to 3200ms across all product endpoints.",
+    "log_excerpt": "2026-09-28 09:15:22 WARN [catalog-api] Redis eviction policy volatile-lru triggered. 15,000 keys evicted in 5 seconds. Cache hit ratio dropped from 94% to 11%.",
+    "root_cause": "Redis cache eviction cascade caused by a bulk product sync job storing uncompressed session tokens in the main catalog Redis cluster without TTL.",
+    "resolution_steps": "1. Separated session tokens into a dedicated Redis instance.\n2. Configured all catalog cache items with mandatory 1-hour max TTL.\n3. Increased maxmemory policy to allkeys-lru on catalog cluster.",
+    "was_successful": true
+  },
+  {
+    "incident_id": "INC-2026-003",
+    "service": "payment-gateway",
+    "timestamp": "2026-09-27T18:45:00Z",
+    "symptoms_summary": "Payment processing callbacks failing with HTTP 504 Gateway Timeout and socket hangup errors.",
+    "log_excerpt": "2026-09-27 18:45:11 ERROR [payment-gateway] upstream HTTP 504 gateway timeout from payment-processor.example.com; socket hangup after 30000ms.",
+    "root_cause": "Upstream payment provider third-party webhooks experienced DNS routing failures and network socket timeouts during regional ISP outage.",
+    "resolution_steps": "1. Enabled asynchronous payment retry queue with exponential backoff.\n2. Switched primary payment route to secondary processor gateway.\n3. Notified payment provider support of DNS resolution failures.",
+    "was_successful": true
+  }
+]
